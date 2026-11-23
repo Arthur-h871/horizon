@@ -4762,6 +4762,46 @@ mod tests {
             None
         );
     }
+    /// `native_state_block`/`native_state_property` (the registry lookups `LevelHost::state_block`/
+    /// `state_property` wrap, PR #20077): a known state's block name and one of its properties, `None`
+    /// for a property it doesn't have and for an unknown state. This covers the registry read itself;
+    /// it doesn't go through `LevelHost` on `GameLevel`/`HitLevel`/`LevelTicks` (needs `with_game`'s
+    /// real game resources, not available where this was written).
+    #[test]
+    fn state_block_and_state_property_read_the_registry() {
+        let facts = br#"{"defaults":{"minecraft:air":0,"test:pipe":1},"states":[
+            ["air",true,false,"","minecraft:air"],
+            ["north_gas",false,false,"",{"id":"test:pipe","properties":{"carries":"gas","facing":"north"}}]
+        ]}"#;
+        let registry = horizon_world::registry::BlockRegistry::from_facts_json(&facts[..]).unwrap();
+        use horizon_world::registry::BlockStateId;
+        let (air, north_gas, unknown) = (BlockStateId(0), BlockStateId(1), BlockStateId(99));
+        assert_eq!(
+            registry.state(north_gas).map(|s| &*s.name),
+            Some("test:pipe")
+        );
+        assert_eq!(registry.state(air).map(|s| &*s.name), Some("minecraft:air"));
+        assert_eq!(registry.state(unknown).map(|s| &*s.name), None);
+        assert_eq!(
+            registry
+                .state(north_gas)
+                .and_then(|s| s.properties.get("facing"))
+                .map(String::as_str),
+            Some("north")
+        );
+        assert_eq!(
+            registry
+                .state(north_gas)
+                .and_then(|s| s.properties.get("missing")),
+            None
+        );
+        assert_eq!(
+            registry
+                .state(unknown)
+                .and_then(|s| s.properties.get("facing")),
+            None
+        );
+    }
     /// Both property setters return false for a write that changes nothing:
     /// each goes through `property_change`, none returns true on its own.
     #[test]
