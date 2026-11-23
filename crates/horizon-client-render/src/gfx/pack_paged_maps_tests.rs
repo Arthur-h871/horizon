@@ -13,8 +13,9 @@ fn texel(x: u32, y: u32) -> [u8; 4] {
 }
 
 #[test]
-#[ignore = "requires a host GPU; missing adapter is a failure"]
+#[ignore = "daily"]
 fn a_pack_reads_paged_maps_at_the_colours_coordinates() {
+    let _gpu = crate::gfx::test_gpu::lock();
     let instance = crate::gfx::test_gpu::instance();
     let adapter = pollster::block_on(instance.request_adapter(&Default::default())).unwrap();
     let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
@@ -91,6 +92,8 @@ void main() {
         terrain: Some(horizon_shaders::GbuffersInputs {
             body: "vec2 p = vec2(float((gl_VertexIndex << 1) & 2), float(gl_VertexIndex & 2)); hz_Vertex=vec4(p*2.0-1.0,0.0,1.0);".into(),
             paged_maps: true,
+            water_mask: false,
+            water_patches: false,
             ..Default::default()
         }),
         ..Default::default()

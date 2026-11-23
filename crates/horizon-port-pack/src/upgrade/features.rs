@@ -95,9 +95,41 @@ fn placement(m: &mut Value) {
     }
 }
 
+/// `TrunkPlacer.setDirtAt` in 1.21.1 becomes `placeBelowTrunkBlock` with an
+/// optional provider in 26.3. Use the target version's protected soil tag.
+fn tree_soil(tree: &mut Value) {
+    let Value::Object(config) = tree else {
+        return;
+    };
+    let Some(dirt_provider) = config.remove("dirt_provider") else {
+        return;
+    };
+    let force_dirt = config.remove("force_dirt") == Some(Value::Bool(true));
+    config.entry("below_trunk_provider").or_insert_with(|| {
+        if force_dirt {
+            dirt_provider
+        } else if dirt_provider == json!({"id": "minecraft:dirt"})
+            || dirt_provider == json!({"id": "minecraft:dirt", "properties": {}})
+        {
+            vanilla("soil_beneath_tree")
+        } else {
+            json!({
+                "type": "minecraft:rule_based",
+                "rules": [{
+                    "if_true": {"type": "minecraft:not", "predicate": {
+                        "type": "minecraft:matching_block_tag",
+                        "tag": "minecraft:cannot_replace_below_tree_trunk"
+                    }},
+                    "then": dirt_provider
+                }]
+            })
+        }
+    });
+}
+
 /// A configured feature in 26.3's form: `config` unwrapped, block state
 /// providers renamed, nested features and placements upgraded.
-pub(super) fn feature(v: &Value, report: &mut Report) -> Value {
+pub(crate) fn feature(v: &Value, report: &mut Report) -> Value {
     let Value::Object(o) = v else {
         return v.clone();
     };
@@ -123,6 +155,10 @@ pub(super) fn feature(v: &Value, report: &mut Report) -> Value {
     let mut v = Value::Object(n);
     states(&mut v);
     nested(&mut v, report);
+    if t == "tree" {
+        tree_soil(&mut v);
+    }
+    crate::lithostitched::weighted_selector(&mut v);
     v
 }
 
@@ -166,7 +202,7 @@ fn nested(v: &mut Value, report: &mut Report) {
 
 /// A placed feature: its feature (an id or inline) and its placement
 /// modifiers.
-pub(super) fn placed(v: &Value, report: &mut Report) -> Value {
+pub(crate) fn placed(v: &Value, report: &mut Report) -> Value {
     let mut v = v.clone();
     states(&mut v);
     if let Some(f) = v.get("feature").cloned()

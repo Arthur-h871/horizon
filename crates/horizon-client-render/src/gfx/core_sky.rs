@@ -3,8 +3,8 @@
 //! to the horizon or tints the night sky expects. Without one the sky draws natively (`fs_sky` in
 //! terrain.wgsl, stars.rs).
 
+use crate::core_shader::{CoreProgram, Glue};
 use glam::Mat4;
-use horizon_shaders::{CoreProgram, Glue};
 use wgpu::util::DeviceExt;
 
 /// `DefaultVertexFormat.POSITION`: the disc's and the stars' vertices.
@@ -311,6 +311,7 @@ mod tests {
     /// disc, the bottom half stays clear.
     #[test]
     fn a_pack_sky_shader_paints_the_disc_above_the_horizon() {
+        let _gpu = crate::gfx::test_gpu::lock();
         let root = resources();
         let Ok(vertex) =
             std::fs::read_to_string(root.join("assets/minecraft/shaders/core/sky.vsh"))
@@ -325,7 +326,7 @@ mod tests {
         let fragment = "#version 330\n#include <minecraft:dynamictransforms.glsl>\n\
             layout(location = 0) out vec4 fragColor;\n\
             void main() {\n    fragColor = ColorModulator;\n}\n";
-        let program = horizon_shaders::translate_core(&vertex, fragment, &[], &include, &GLUE)
+        let program = crate::core_shader::translate_core(&vertex, fragment, &[], &include, &GLUE)
             .expect("the sky shaders translate");
         let instance = crate::gfx::test_gpu::instance();
         let Some((device, queue)) =

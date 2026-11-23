@@ -26,10 +26,11 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 try:
-    from . import lab, lra_schem, test_rust_parity as base
+    from . import lab, lra_schem, parity_shard, test_rust_parity as base
 except ImportError:
     import lab
     import lra_schem
+    import parity_shard
     import test_rust_parity as base
 
 ARCHIVE = 'mattbatwings/Logical-Redstone-Archive'
@@ -214,9 +215,9 @@ def main():
     parser.add_argument('--full', action='store_true', help='every entry, larger sweeps (exhaustive up to 16 bits)')
     parser.add_argument('--only', help='comma separated codes')
     args = parser.parse_args()
+    shard, shards = parity_shard.parse(os.environ.get('PARITY_SHARD', '1/1'))
     lock, jars, libraries = base.verify_artifacts()
     resources = lab.LOCAL / 'horizon-client' / lock['minecraft']['version']
-    shard, shards = map(int, os.environ.get('PARITY_SHARD', '1/1').split('/'))
     work = lab.LOCAL / 'redstone-catalog-parity' / (f'shard-{shard}' if shards > 1 else 'all')
     work.mkdir(parents=True, exist_ok=True)
     entries = load_catalog()
@@ -255,8 +256,8 @@ def main():
         case['time'] = next((int(n[5:]) for n in notes if n.startswith('time ')), 0)
         case['analog'] = [[*map(int, a.split(' ')[0].split(',')), int(a.split(' ')[1])] for a in vanilla.get(case['code'], ([], [], []))[1]]
     (work / 'rust-cases.jsonl').write_text(''.join(json.dumps(c, separators=(',', ':')) + '\n' for c in cases))
-    run(['cargo', 'build', '--release', '-p', 'horizon-world', '--example', 'world_probe'], args.full)
-    probe = lab.cargo_target() / 'release/examples' / ('world_probe.exe' if os.name == 'nt' else 'world_probe')
+    run(['cargo', 'build', '--profile', 'fast', '-p', 'horizon-world', '--example', 'world_probe'], args.full)
+    probe = lab.cargo_target() / 'fast/examples' / ('world_probe.exe' if os.name == 'nt' else 'world_probe')
     run([str(probe), 'redstone_catalog_fixture', str(resources), str(work / 'rust-cases.jsonl'), str(work / 'rust.txt')], args.full)
     rust = split((work / 'rust.txt').read_text())
     status.update({e['code']: e['status'] for e in entries})
