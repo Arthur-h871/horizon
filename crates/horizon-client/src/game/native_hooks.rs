@@ -10191,6 +10191,18 @@ impl GameLevel<'_> {
     pub(super) fn native_state_block(&self, state: BlockStateId) -> Option<&str> {
         self.registry.state(state).map(|s| &*s.name)
     }
+    /// Property `key` of block state `state` (a machine's `facing`), if it
+    /// has one, as `native_block_state_property` reads it for drawing: a
+    /// registry lookup, no access to the world, so cheap even from a hook
+    /// that only gets a `LevelHost` (`block_signal`, `is_signal_source`).
+    /// None for an unknown state or a property it doesn't have.
+    pub(super) fn native_state_property(&self, state: BlockStateId, key: &str) -> Option<&str> {
+        self.registry
+            .state(state)?
+            .properties
+            .get(key)
+            .map(String::as_str)
+    }
     /// This level's own random (vanilla's `Level.random`): the stream
     /// `native_level_random(dimension)` hands a server hook, for a world hook
     /// that draws as a vanilla block does (`isBonemealSuccess`), so the mod's

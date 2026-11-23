@@ -164,6 +164,12 @@ impl horizon_client::mod_api::LevelHost for super::GameLevel<'_> {
     ) -> Option<BlockStateId> {
         self.native_state_with_property(state, key, value)
     }
+    fn state_block(&self, state: BlockStateId) -> Option<String> {
+        self.native_state_block(state).map(str::to_string)
+    }
+    fn state_property(&self, state: BlockStateId, key: &str) -> Option<String> {
+        self.native_state_property(state, key).map(str::to_string)
+    }
 }
 
 impl horizon_client::mod_api::LevelRandomHost for super::GameLevel<'_> {
@@ -204,6 +210,14 @@ impl<'a, L: std::ops::Deref<Target = super::GameLevel<'a>>> horizon_client::mod_
         value: &str,
     ) -> Option<BlockStateId> {
         horizon_client::mod_api::LevelHost::state_with_property(&*self.level, state, key, value)
+    }
+    fn state_block(&self, state: BlockStateId) -> Option<String> {
+        self.level.native_state_block(state).map(str::to_string)
+    }
+    fn state_property(&self, state: BlockStateId, key: &str) -> Option<String> {
+        self.level
+            .native_state_property(state, key)
+            .map(str::to_string)
     }
 }
 

@@ -4896,8 +4896,13 @@ hooks can run on any loading thread; item default changes must be identical on e
 
 The trait has every hook in `native-hooks.json` and the pending fragments ([Adding a hook](#adding-a-hook)).
 Level hooks use access-specific hosts rather than `Host`. `LevelHost` provides
-`block_state` through `LevelAccess::block_state`, client-side detection and
-`state_with_property`. `LevelRandomHost` provides vanilla's `Level.random` so
+`block_state` through `LevelAccess::block_state`, client-side detection,
+`state_with_property`, and two registry-only lookups that need no access to the world so they
+stay cheap from a hook that only gets a `LevelHost`: `state_block` names the block a state
+belongs to (as `native_state_block` does for the richer hosts), and `state_property` reads one
+of its properties (as `native_block_state_property` does). Together they let a mod's own block
+answer `block_signal` or `is_signal_source` from its own blockstate (a lever's position, a
+dial's reading) without needing write access to decide what it emits. `LevelRandomHost` provides vanilla's `Level.random` so
 mod draws come in vanilla's order. `LevelTicksHost` adds scheduling through
 `native_schedule_block_tick` and `native_schedule_fluid_tick`, while
 `LevelWriteHost` adds random access, `native_set_block_property`, `native_play_sound` and

@@ -1021,6 +1021,19 @@ pub trait LevelHost {
         key: &str,
         value: &str,
     ) -> Option<BlockStateId>;
+    /// The block `state` is a state of (`BlockState.getBlock()`): its name, `mymod:cable`, through
+    /// `native_state_block`. A registry lookup, no access to the world: cheap even from a hook
+    /// that only gets a `LevelHost` (`block_signal`, `is_signal_source`). None for an unknown
+    /// state. Owned (not `&str`, unlike `native_state_block`'s own return): some `LevelHost`
+    /// implementors (`LevelTicks`) only reach the registry through a short-lived borrow, which
+    /// can't hand back a reference shaped by the elided lifetime of `&self` alone.
+    fn state_block(&self, state: BlockStateId) -> Option<String>;
+    /// Property `key` of block state `state` (a machine's `facing`), if it has one, through
+    /// `native_block_state_property`. A registry lookup, no access to the world: cheap even from a
+    /// hook that only gets a `LevelHost`. Lets a mod block answer `block_signal`/`is_signal_source`
+    /// from its own blockstate (a lever's position, a dial's reading) without a richer host. Owned
+    /// for the same reason as `state_block`.
+    fn state_property(&self, state: BlockStateId, key: &str) -> Option<String>;
 }
 
 /// Access vanilla's `Level.random`, so draws come in vanilla's order.
