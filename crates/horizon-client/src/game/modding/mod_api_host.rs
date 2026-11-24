@@ -552,11 +552,11 @@ impl mod_api::LevelHost for super::native_hooks::HitLevel<'_> {
             .map(|s| &*s.name)
     }
     fn state_property(&self, state: mod_api::BlockState, key: &str) -> Option<&str> {
-        self.0
-            .registry()
-            .state(state.try_into_engine(&()).ok()?)
-            .and_then(|s| s.properties.get(key))
-            .map(String::as_str)
+        super::native_hooks::state_property(
+            self.0.registry(),
+            state.try_into_engine(&()).ok()?,
+            key,
+        )
     }
     fn state_string(&self, state: mod_api::BlockState) -> Option<String> {
         self.0

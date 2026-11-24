@@ -1987,11 +1987,7 @@ impl GameLevel<'_> {
     /// a `LevelHost` (`block_signal`, `is_signal_source`). None for an
     /// unknown state or a property it doesn't have.
     pub(super) fn native_state_property(&self, state: BlockStateId, key: &str) -> Option<&str> {
-        self.registry
-            .state(state)?
-            .properties
-            .get(key)
-            .map(String::as_str)
+        state_property(self.registry, state, key)
     }
 }
 
@@ -3555,6 +3551,20 @@ pub(super) fn with_property(
     registry.resolve(&s).ok()
 }
 
+/// Property `key` of `state`; none for an unknown state or a property it
+/// doesn't have.
+pub(super) fn state_property<'r>(
+    registry: &'r BlockRegistry,
+    state: BlockStateId,
+    key: &str,
+) -> Option<&'r str> {
+    registry
+        .state(state)?
+        .properties
+        .get(key)
+        .map(String::as_str)
+}
+
 /// The state a mod's property write changes `state` to; none when the block
 /// has no such property or value, or already has it: `LevelChunk.setBlockState`
 /// returns null for the same state, so `Level.setBlock` returns false.
@@ -4767,45 +4777,23 @@ mod tests {
             None
         );
     }
-    /// `native_state_block`/`native_state_property` (the registry lookups `LevelHost::state_block`/
-    /// `state_property` wrap, PR #20077): a known state's block name and one of its properties, `None`
-    /// for a property it doesn't have and for an unknown state. This covers the registry read itself;
-    /// it doesn't go through `LevelHost` on `GameLevel`/`HitLevel`/`LevelTicks` (needs `with_game`'s
-    /// real game resources, not available where this was written).
+    /// `state_property` (what `LevelHost::state_property` on `GameLevel` and `HitLevel` reads):
+    /// a known state's property, `None` for a property it doesn't have and for an unknown state.
     #[test]
-    fn state_block_and_state_property_read_the_registry() {
+    fn state_property_reads_the_registry() {
         let facts = br#"{"defaults":{"minecraft:air":0,"test:pipe":1},"states":[
             ["air",true,false,"","minecraft:air"],
             ["north_gas",false,false,"",{"id":"test:pipe","properties":{"carries":"gas","facing":"north"}}]
         ]}"#;
         let registry = horizon_world::registry::BlockRegistry::from_facts_json(&facts[..]).unwrap();
         use horizon_world::registry::BlockStateId;
-        let (air, north_gas, unknown) = (BlockStateId(0), BlockStateId(1), BlockStateId(99));
+        let (north_gas, unknown) = (BlockStateId(1), BlockStateId(99));
         assert_eq!(
-            registry.state(north_gas).map(|s| &*s.name),
-            Some("test:pipe")
-        );
-        assert_eq!(registry.state(air).map(|s| &*s.name), Some("minecraft:air"));
-        assert_eq!(registry.state(unknown).map(|s| &*s.name), None);
-        assert_eq!(
-            registry
-                .state(north_gas)
-                .and_then(|s| s.properties.get("facing"))
-                .map(String::as_str),
+            super::state_property(&registry, north_gas, "facing"),
             Some("north")
         );
-        assert_eq!(
-            registry
-                .state(north_gas)
-                .and_then(|s| s.properties.get("missing")),
-            None
-        );
-        assert_eq!(
-            registry
-                .state(unknown)
-                .and_then(|s| s.properties.get("facing")),
-            None
-        );
+        assert_eq!(super::state_property(&registry, north_gas, "missing"), None);
+        assert_eq!(super::state_property(&registry, unknown, "facing"), None);
     }
     /// Both property setters return false for a write that changes nothing:
     /// each goes through `property_change`, none returns true on its own.
